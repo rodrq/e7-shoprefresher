@@ -1,0 +1,1 @@
+Simple Python script to automatically refresh Epic Seven shop and buy mystics and covenants. 

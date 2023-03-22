@@ -31,23 +31,24 @@ def locate(media, threshold:float=0.90):
     center_w = int(max_loc[0] + w/2)
     center_h = int(max_loc[1] + h/2)
     if max_val >= threshold:
-        print(f'{media} found with {max_val * 100}% confidence')
         return f"{center_w} {center_h}"
     else:
-        print(f'{media} not found. Only {max_val * 100}% match')
         return None
 
 
 def buy_summon(summon):
     coords = locate(summon)
     if coords != None:
+        coords = coords.split(' ')
         coords = f"{int(coords[0])+700} {int(coords[1])+40}"
-        adb_command(f'adb shell input tap {coords}')
-        if locate('confirm_buy'):
+        while not locate('confirm_buy'):
+            adb_command(f'adb shell input tap {coords}')
+            time.sleep(0.5)
+        while locate('confirm_buy'):
             adb_command(f'adb shell input tap 900 630')
-            print(f"Bought {summon}")
-            time.sleep(1)
-            return True
+        print(f"Bought {summon}")
+        time.sleep(1)
+        return True
     else:
         return None
 
@@ -65,21 +66,22 @@ def dispatch_completed_checker():
 
 def connection_error_checker():
     if locate('connection_error'):
-        print('Connection error')
+        print('Closing connection error pop-up. ')
         adb_command('adb shell input tap 800 800')
         time.sleep(3)
 
 
 
 def refresher():
+    print('Shop refreshing')
     while not locate('confirm_refresh'):
             adb_command('adb shell input tap 290 826')
-            time.sleep(0.25)
+            time.sleep(0.4)
 
     while locate('confirm_refresh'):
             adb_command('adb shell input tap 950 550')
-            time.sleep(0.25)
-    time.sleep(0.5)
+            time.sleep(0.4)
+
 
 
 def ocr_rss_fetcher():
@@ -96,30 +98,35 @@ def ocr_rss_fetcher():
 
 def main():
     gold, skystones = ocr_rss_fetcher()
-    print(f"Gold = {gold}. Skystones = {skystones}")
+    covenants_bought = 0
+    mystics_bought= 0
+    print(f"Gold = {gold}. \nSkystones = {skystones}")
     while True:
-        dispatch_completed_checker()
         connection_error_checker()
+        dispatch_completed_checker()
         swiped = False
         for n in range(2):
             if buy_summon('mystics'):
                 gold -= 280000
+                mystics_bought += 1
             if buy_summon('covenant'):
                 gold -= 184000
+                covenants_bought += 1
             if swiped==False:
                 adb_command('adb shell input touchscreen swipe 1250 580 1250 200')
                 swiped=True
         if gold < 280000 or skystones < 1800:
+            print('Script terminated because gold or skystones limit surpassed')
             break
         refresher()
         skystones -= 3
-        print(f"Current gold: {gold} \nCurrent skystones: {skystones}")
+        print(f"Current gold: {gold} \nCurrent skystones: {skystones} \nCovenants bought: {covenants_bought} \nMystics bought: {mystics_bought}")
 
 
 while True:
     main()
     
-#get_screenshot_native_resolution()
+
 
 
 

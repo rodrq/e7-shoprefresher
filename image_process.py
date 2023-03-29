@@ -19,21 +19,13 @@ def get_screenshot():
 
 
 def fetch_screenshot_native_resolution():
+    # Function used to get templates with the same quality and resolution as get_screenshot(), since my emulator window is resized.
     with subprocess.Popen("adb exec-out screencap -p", stdout=subprocess.PIPE, shell=True) as proc: 
         screenshot_bytes = proc.stdout.read()
         screenshot = np.frombuffer(screenshot_bytes, np.uint8)
     with open('template_fetch.png', 'wb') as f:
         f.write(screenshot)
 
-
-def ocr_rss_fetcher():
-    img = get_screenshot()
-    x, y, w, h = 987, 18, 300, 40
-    crop_img = img[y:y+h, x:x+w]
-    text = pytesseract.image_to_string(crop_img)
-    digit_substrings = text.replace(',', '').split()
-    numbers = [int(substring) for substring in digit_substrings if substring.isdigit()]
-    return numbers
           
 
 def locate(media, threshold:float=0.90, region = (0, 0, 1600, 900)):
@@ -84,6 +76,9 @@ def in_secretshop():
         return False
 
 def refresher():
+    """
+    Many while loops since sometimes inputs don't register in the front-end and bugs the whole thing out.
+    """
     print('Shop refreshing')
     while not locate('confirm_refresh'):
             adb_tap(290, 826, taps=2)
@@ -100,18 +95,17 @@ def dispatch_completed_checker():
         sleep(8)
         adb_tap(1070, 720, taps=3)
 
-
-
-
-
         
 
 def find_buy_summon(summon):
-    coords = locate_center(summon, region=(680, 80, 150, 900-80))
+    """
+    Finds and buys the summon. Searches the row where items appear to speed up a bit the script with (region= x, x, x, x). 
+    """
+    coords = locate_center(summon, region=(680, 80, 150, 820))
     if coords:
         coords = coords.split(' ')
         while not locate('confirm_buy'):
-            #adb_command(f'adb shell input tap {coords}')
+            #+700 +60 is the offset where the "buy" button appears in comparison to the template. 
             adb_tap(int(coords[0])+700, int(coords[1]) + 60, taps= 2)
             sleep(0.15)
         while locate('confirm_buy'):
@@ -125,6 +119,9 @@ def find_buy_summon(summon):
 
 
 def connection_error_checker():
+    """This should be a separate thread that checks constantly and sets a flag 
+    to stop the script but found a messy logic workaround that worked so all good.
+    """
     error_located = False
     while locate('connection_error') or locate('ras_connection_error'):
             error_located=True
@@ -137,9 +134,8 @@ def connection_error_checker():
 ### PROGRAM LOGIC ###
 def main():
     adb_connect()
-    #TEMPORAL
+    #On both these inputs, I should check that just integers are entered. But it works fine and already bored of this project.
     gold = int(input('Current gold: '))
-    #TEMPORAL
     skystones = int(input('Current skystones: '))
     skystones_spent = 0
     gold_spent = 0
@@ -155,6 +151,7 @@ def main():
             print('Script terminated because gold or skystones limit surpassed')
             break
         swiped = False
+        # Needs to be checked twice since the last item only shows after scrolling down the shop menu. Swiped = False to True is to avoid a second scroll-down.
         for n in range(2):
             if not already_bought_m:
                 if find_buy_summon('mystics'):
@@ -175,6 +172,14 @@ def main():
             print('Script terminated because gold or skystones limit surpassed')
             print(f'STATS:\nCovenants bought: {covenants_bought}\nMystics bought: {mystics_bought}\nSkystones spent: {skystones_spent}\nGold spent: {gold_spent}')
             break
+        """
+        This is the messy logic workaround I found. Since the script only bugs when stuck at waiting for a certain template and
+        connection errors could make these never appear. I check for them before the intensive image processing task of refreshing
+        the shop. 
+        If the connection error appeared just before confirming the refresh, the script would refresh twice. So I added that simple
+        boolean variable.
+        Just messy coding. 
+        """
         if connection_error_checker() == True:
             error_found = True
         if not error_found:

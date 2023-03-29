@@ -2,6 +2,7 @@ import subprocess
 import cv2 as cv
 import numpy as np
 import pytesseract
+from config import LIMIT_SKYSTONES, LIMIT_GOLD
 from config import TESSERACT_PATH
 from adb import *
 from time import sleep
@@ -11,7 +12,8 @@ pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 def get_screenshot():
     #Grabs binary with 'adb screencap', loads it into numpy and converts to grayscale and 2D array for OpenCV use.
     with subprocess.Popen("adb exec-out screencap -p", stdout=subprocess.PIPE, shell=True) as proc: 
-        screenshot_binary = np.frombuffer(proc.stdout.read(), np.uint8)
+        result = proc.stdout.read()
+        screenshot_binary = np.frombuffer(result, np.uint8)
         screenshot = cv.imdecode(screenshot_binary, cv.IMREAD_GRAYSCALE)
         return screenshot
 
@@ -84,26 +86,25 @@ def in_secretshop():
 def refresher():
     print('Shop refreshing')
     while not locate('confirm_refresh'):
-            adb_tap(290, 826)
+            adb_tap(290, 826, taps=2)
             sleep(0.25)
     while locate('confirm_refresh'):
-            adb_tap(950, 550)
-            sleep(0.25)
+            adb_tap(950, 550, taps=2)
+            sleep(0.32)
 
 def dispatch_completed_checker():
     if locate('dispatch_completed'):
         print('Dispatch mission completed')
-        adb_tap(1070, 720)
+        adb_tap(1070, 720, taps=3)
         print('Waiting for second dispatch mission')
         sleep(8)
-        adb_tap(1070, 720)
+        adb_tap(1070, 720, taps=3)
 
 
-def connection_error_checker():
-    if locate('connection_error'):
-        print('Closing connection error pop-up. ')
-        adb_tap(800, 800)
-        sleep(3)
+
+
+
+        
 
 def find_buy_summon(summon):
     coords = locate_center(summon, region=(680, 80, 150, 900-80))
@@ -111,13 +112,75 @@ def find_buy_summon(summon):
         coords = coords.split(' ')
         while not locate('confirm_buy'):
             #adb_command(f'adb shell input tap {coords}')
-            adb_tap(int(coords[0])+700, int(coords[1]) + 40)
+            adb_tap(int(coords[0])+700, int(coords[1]) + 60, taps= 2)
             sleep(0.15)
         while locate('confirm_buy'):
-            adb_tap(900, 630)
+            adb_tap(900, 630, taps=2)
             sleep(0.15)
         print(f"Bought {summon}")
         return True
     else:
         return None
 
+
+
+def connection_error_checker():
+    error_located = False
+    while locate('connection_error') or locate('ras_connection_error'):
+            error_located=True
+            print('Connection error located. Trying to close and/or waiting.')
+            adb_tap(800, 800, taps=2)
+            sleep(10)
+    return error_located
+
+
+### PROGRAM LOGIC ###
+def main():
+    adb_connect()
+    #TEMPORAL
+    gold = int(input('Current gold: '))
+    #TEMPORAL
+    skystones = int(input('Current skystones: '))
+    skystones_spent = 0
+    gold_spent = 0
+    covenants_bought = 0
+    mystics_bought= 0
+    limit_skystones = LIMIT_SKYSTONES
+    limit_gold = LIMIT_GOLD
+    error_found = False
+    while True:
+        already_bought_m= False
+        already_bought_c=False
+        if gold < limit_gold or skystones < limit_skystones:
+            print('Script terminated because gold or skystones limit surpassed')
+            break
+        swiped = False
+        for n in range(2):
+            if not already_bought_m:
+                if find_buy_summon('mystics'):
+                    gold -= 280000
+                    gold_spent += 280000
+                    mystics_bought += 1
+                    already_bought_m = True
+            if not already_bought_c:
+                if find_buy_summon('covenant'):
+                    gold -= 184000
+                    gold_spent += 184000
+                    covenants_bought += 1
+                    already_bought_c = True
+            if not swiped:
+                adb_command('adb shell input touchscreen swipe 1250 580 1250 200')
+                swiped=True
+        if gold < limit_gold or skystones < limit_skystones:
+            print('Script terminated because gold or skystones limit surpassed')
+            print(f'STATS:\nCovenants bought: {covenants_bought}\nMystics bought: {mystics_bought}\nSkystones spent: {skystones_spent}\nGold spent: {gold_spent}')
+            break
+        if connection_error_checker() == True:
+            error_found = True
+        if not error_found:
+            refresher()
+        error_found = False
+        skystones -= 3
+        skystones_spent += 3
+        print(f"Current gold: {gold} out of {limit_gold} \nCurrent skystones: {skystones} out of {limit_skystones} \nCovenants bought: {covenants_bought} \nMystics bought: {mystics_bought}")
+        sleep(2)

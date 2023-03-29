@@ -1,3 +1,7 @@
+"""
+Some functions to make the use of adb outside a cmd less of a headache.
+"""
+
 import subprocess
 from time import sleep
 
@@ -6,6 +10,7 @@ def adb_command(text:str):
 
 def adb_connect():
     adb_command('adb start-server')
+    adb_command('adb devices')
 
 def adb_tap(x, y, taps = 1):
     for n in range(taps):

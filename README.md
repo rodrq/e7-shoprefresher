@@ -9,18 +9,18 @@ It's not beginner friendly but if you found this on Github, you'll probably know
 
 Requirements are:
 
-Python 3.9.2
+	Python 3.9.2
 
-adb installed + on PATH. https://developer.android.com/studio/releases/platform-tools
+	adb installed + on PATH. https://developer.android.com/studio/releases/platform-tools
 
-numpy. "pip install numpy"
+	numpy. "pip install numpy"
 
-OpenCV. "pip install opencv-python"
+	OpenCV. "pip install opencv-python"
 
 
 
 How to run:
 
-cd to script folder
+	cd to script folder
 
-"python.exe main.py" 
+	"python.exe main.py" 

@@ -1,13 +1,10 @@
 import subprocess
 import cv2 as cv
 import numpy as np
-import pytesseract
 from config import LIMIT_SKYSTONES, LIMIT_GOLD
-from config import TESSERACT_PATH
 from adb import *
 from time import sleep
 
-pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
 def get_screenshot():
     #Grabs binary with 'adb screencap', loads it into numpy and converts to grayscale and 2D array for OpenCV use.
